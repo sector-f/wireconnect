@@ -21,13 +21,28 @@ func (s *Server) initDB() error {
 	_, err := s.db.Exec(
 		`CREATE TABLE IF NOT EXISTS users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT NOT NULL,
+			username TEXT UNIQUE NOT NULL,
 			password TEXT NOT NULL,
 			is_admin BOOLEAN NOT NULL DEFAULT false
 		)`,
 	)
 
 	return err
+}
+
+func (s *Server) authenticate(username, password string) error {
+	var dbPass string
+
+	row := s.db.QueryRow(`SELECT password FROM users WHERE username = ?`, username)
+	switch err := row.Scan(&dbPass); err {
+	case sql.ErrNoRows:
+		return err
+	case nil:
+		return bcrypt.CompareHashAndPassword([]byte(dbPass), []byte(password))
+	default:
+		return err
+	}
+
 }
 
 func (s *Server) addUser(user User) error {
