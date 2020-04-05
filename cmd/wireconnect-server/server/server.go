@@ -21,9 +21,6 @@ type route struct {
 type handler struct {
 	method      string
 	handlerFunc http.HandlerFunc
-
-	needsAuth  bool
-	permission string
 }
 
 type Config struct {
@@ -83,7 +80,6 @@ func NewServer(conf Config) (*Server, error) {
 				handler{
 					method:      "POST",
 					handlerFunc: server.connectHandler,
-					needsAuth:   true,
 				},
 			},
 		},
@@ -93,7 +89,6 @@ func NewServer(conf Config) (*Server, error) {
 				handler{
 					method:      "POST",
 					handlerFunc: server.disconnectHandler,
-					needsAuth:   true,
 				},
 			},
 		},
@@ -102,12 +97,7 @@ func NewServer(conf Config) (*Server, error) {
 	for _, route := range routes {
 		methodHandler := make(handlers.MethodHandler)
 		for _, handler := range route.handlers {
-			h := handler.handlerFunc
-
-			if handler.needsAuth {
-				h = server.authLimit(h)
-			}
-
+			h := server.authLimit(handler.handlerFunc)
 			methodHandler[handler.method] = h
 
 			if handler.method == "GET" {

@@ -1,34 +1,24 @@
 package server
 
 import (
-	// "fmt"
+	"fmt"
 	"io"
 	"net/http"
 )
 
 func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
-	// username, password, ok := r.BasicAuth()
-	// if !ok {
-	// 	w.WriteHeader(http.StatusUnauthorized)
-	// 	io.WriteString(w, "Authentication required\n")
-	// 	return
-	// }
-
+	username, _, _ := r.BasicAuth()
 	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, fmt.Sprintf("Successfully authenticated as %s\n", username))
 }
 
 func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
-	// username, password, ok := r.BasicAuth()
-	// if !ok {
-	// 	w.WriteHeader(http.StatusUnauthorized)
-	// 	io.WriteString(w, "Authentication required\n")
-	// 	return
-	// }
-
+	username, _, _ := r.BasicAuth()
 	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, fmt.Sprintf("Successfully authenticated as %s\n", username))
 }
 
-func (s *Server) authLimit(h http.Handler) http.HandlerFunc {
+func (s *Server) authLimit(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, ok := r.BasicAuth()
 		if !ok {
