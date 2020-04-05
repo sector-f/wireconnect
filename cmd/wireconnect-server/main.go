@@ -1,17 +1,11 @@
 package main
 
 import (
-	// "encoding/json"
 	"log"
 	"net/http"
 
-	// "crypto/tls"
-
-	// "github.com/gorilla/mux"
 	"github.com/sector-f/wireconnect"
 	"github.com/sector-f/wireconnect/cmd/wireconnect-server/server"
-	// "github.com/WireGuard/wgctrl-go"
-	// "github.com/juju/ratelimit"
 )
 
 var auth wireconnect.AuthProvider = mockAuth{}
@@ -25,6 +19,13 @@ type Route struct {
 
 func main() {
 	config := server.NewConfig()
-	server := server.NewServer(config)
+	config.DSN = "file:./wireconnect.sqlite"
+
+	server, err := server.NewServer(config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Listening on %s\n", config.Address)
 	log.Fatal(server.ListenAndServe())
 }
