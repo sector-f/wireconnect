@@ -9,7 +9,6 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
-	// "github.com/juju/ratelimit"
 	// "github.com/WireGuard/wgctrl-go"
 )
 

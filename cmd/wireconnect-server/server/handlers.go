@@ -3,8 +3,12 @@ package server
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strings"
 )
+
+var limiter = NewLimiter()
 
 func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
 	username, _, _ := r.BasicAuth()
@@ -20,6 +24,21 @@ func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) authLimit(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var sourceAddr string
+		if strings.Contains(r.RemoteAddr, ":") {
+			sourceAddr, _, _ = net.SplitHostPort(r.RemoteAddr)
+		} else {
+			sourceAddr = r.RemoteAddr
+		}
+
+		bucket := limiter.getIP(sourceAddr)
+		if bucket.TakeAvailable(1) == 0 {
+			// Rate limit has been reached
+			w.WriteHeader(http.StatusTooManyRequests)
+			io.WriteString(w, "Rate limit has been reached\n")
+			return
+		}
+
 		username, password, ok := r.BasicAuth()
 		if !ok {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -29,10 +48,13 @@ func (s *Server) authLimit(h http.Handler) http.Handler {
 
 		err := s.authenticate(username, password)
 		if err != nil {
+
 			w.WriteHeader(http.StatusUnauthorized)
 			io.WriteString(w, "Bad username or password\n")
 			return
 		}
+
+		limiter.delIP(sourceAddr)
 
 		h.ServeHTTP(w, r)
 	})
