@@ -9,3 +9,7 @@ type Reply struct {
 	ClientAddress string `json:"client_address"`
 	ServerAddress string `json:"server_address"`
 }
+
+type BanList struct {
+	Addresses []string
+}

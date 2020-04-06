@@ -40,6 +40,18 @@ func NewLimiter() *rateLimiter {
 	return r
 }
 
+func (r *rateLimiter) getBans() []string {
+	banList := []string{}
+	r.mu.Lock()
+	for addr, bucket := range r.buckets {
+		if bucket.Available() <= 0 {
+			banList = append(banList, addr)
+		}
+	}
+	r.mu.Unlock()
+	return banList
+}
+
 func (r *rateLimiter) purge(purgeInterval time.Duration) {
 	r.mu.Lock()
 	for address, bucket := range r.buckets {

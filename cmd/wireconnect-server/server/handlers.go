@@ -22,6 +22,13 @@ func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, fmt.Sprintf("Successfully authenticated as %s\n", username))
 }
 
+func (s *Server) getBansHandler(w http.ResponseWriter, r *http.Request) {
+	bans := limiter.getBans()
+	for _, ban := range bans {
+		io.WriteString(w, ban+"\n")
+	}
+}
+
 func (s *Server) adminHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, _, _ := r.BasicAuth()

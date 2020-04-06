@@ -82,6 +82,16 @@ func NewServer(conf Config) (*Server, error) {
 	router := mux.NewRouter()
 	routes := []route{
 		route{
+			pattern: "/bans",
+			handlers: []handler{
+				handler{
+					method:      "GET",
+					handlerFunc: server.getBansHandler,
+					needsAdmin:  true,
+				},
+			},
+		},
+		route{
 			pattern: "/connect",
 			handlers: []handler{
 				handler{
