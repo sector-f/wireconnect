@@ -42,7 +42,20 @@ func (s *Server) authenticate(username, password string) error {
 	default:
 		return err
 	}
+}
 
+func (s *Server) isAdmin(username string) (bool, error) {
+	var isAdmin bool
+
+	row := s.db.QueryRow(`SELECT is_admin FROM users WHERE username = ?`, username)
+	switch err := row.Scan(&isAdmin); err {
+	case sql.ErrNoRows:
+		return false, err
+	case nil:
+		return isAdmin, nil
+	default:
+		return false, err
+	}
 }
 
 func (s *Server) addUser(user User) error {

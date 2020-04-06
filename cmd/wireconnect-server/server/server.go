@@ -20,6 +20,7 @@ type route struct {
 type handler struct {
 	method      string
 	handlerFunc http.HandlerFunc
+	needsAdmin  bool
 }
 
 type Config struct {
@@ -79,6 +80,7 @@ func NewServer(conf Config) (*Server, error) {
 				handler{
 					method:      "POST",
 					handlerFunc: server.connectHandler,
+					needsAdmin:  false,
 				},
 			},
 		},
@@ -88,6 +90,7 @@ func NewServer(conf Config) (*Server, error) {
 				handler{
 					method:      "POST",
 					handlerFunc: server.disconnectHandler,
+					needsAdmin:  false,
 				},
 			},
 		},
@@ -96,7 +99,14 @@ func NewServer(conf Config) (*Server, error) {
 	for _, route := range routes {
 		methodHandler := make(handlers.MethodHandler)
 		for _, handler := range route.handlers {
-			h := server.authLimit(handler.handlerFunc)
+			var h http.Handler = handler.handlerFunc
+
+			if handler.needsAdmin {
+				h = server.adminHandler(h)
+			}
+
+			h = server.authLimit(h)
+
 			methodHandler[handler.method] = h
 
 			if handler.method == "GET" {

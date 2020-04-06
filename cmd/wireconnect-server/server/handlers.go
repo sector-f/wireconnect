@@ -22,6 +22,27 @@ func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, fmt.Sprintf("Successfully authenticated as %s\n", username))
 }
 
+func (s *Server) adminHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, _, _ := r.BasicAuth()
+
+		isAdmin, err := s.isAdmin(username)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, "Internal server error\n")
+			return
+		}
+
+		if !isAdmin {
+			w.WriteHeader(http.StatusUnauthorized)
+			io.WriteString(w, "Only administrators can access this resource\n")
+			return
+		}
+
+		h.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) authLimit(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var sourceAddr string
@@ -33,7 +54,6 @@ func (s *Server) authLimit(h http.Handler) http.Handler {
 
 		bucket := limiter.getIP(sourceAddr)
 		if bucket.TakeAvailable(1) == 0 {
-			// Rate limit has been reached
 			w.WriteHeader(http.StatusTooManyRequests)
 			io.WriteString(w, "Rate limit has been reached\n")
 			return
@@ -48,7 +68,6 @@ func (s *Server) authLimit(h http.Handler) http.Handler {
 
 		err := s.authenticate(username, password)
 		if err != nil {
-
 			w.WriteHeader(http.StatusUnauthorized)
 			io.WriteString(w, "Bad username or password\n")
 			return
