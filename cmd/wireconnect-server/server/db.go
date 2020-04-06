@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"database/sql"
 	"fmt"
+	"net"
 	"os"
 	"syscall"
 
@@ -17,14 +18,27 @@ type User struct {
 	IsAdmin  bool
 }
 
+type DBIface struct {
+	Name    string
+	Address string
+	Mask    []byte
+}
+
 func (s *Server) initDB() error {
 	_, err := s.db.Exec(
 		`CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT UNIQUE NOT NULL,
-			password TEXT NOT NULL,
-			is_admin BOOLEAN NOT NULL DEFAULT false
-		)`,
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	username TEXT UNIQUE NOT NULL,
+	password TEXT NOT NULL,
+	is_admin BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS interfaces (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT NOT NULL,
+	address TEXT NOT NULL,
+	mask INTEGER NOT NULL
+);`,
 	)
 
 	return err
@@ -84,10 +98,21 @@ func (s *Server) userCount() (uint, error) {
 	default:
 		return 0, err
 	}
-
 }
 
-func (s *Server) makeUserInteractive() error {
+func (s *Server) ifaceCount() (uint, error) {
+	var count uint
+
+	row := s.db.QueryRow(`SELECT COUNT(*) FROM interfaces`)
+	switch err := row.Scan(&count); err {
+	case sql.ErrNoRows, nil:
+		return count, nil
+	default:
+		return 0, err
+	}
+}
+
+func (s *Server) makeFirstUser() error {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Creating initial admin user")
 
@@ -106,4 +131,34 @@ func (s *Server) makeUserInteractive() error {
 	fmt.Println()
 
 	return s.addUser(User{Username: username, Password: password, IsAdmin: true})
+}
+
+func (s *Server) makeFirstIface() error {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Creating initial wireguard interface")
+
+	fmt.Print("IP Address: ")
+	addr, err := reader.ReadString('\n')
+	if err != nil {
+		return err
+	}
+	addr = addr[:len(addr)-1]
+
+	ip, network, err := net.ParseCIDR(addr)
+	if err != nil {
+		return err
+	}
+
+	return s.addIface(DBIface{Name: "wireconnect0", Address: ip.String(), Mask: network.Mask})
+}
+
+func (s *Server) addIface(iface DBIface) error {
+	_, err := s.db.Exec(
+		`INSERT INTO interfaces (name, address, mask) VALUES (?, ?, ?)`,
+		iface.Name,
+		iface.Address,
+		iface.Mask,
+	)
+
+	return err
 }

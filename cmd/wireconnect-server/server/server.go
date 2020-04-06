@@ -67,9 +67,16 @@ func NewServer(conf Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if userCount == 0 {
-		server.makeUserInteractive()
+		server.makeFirstUser()
+	}
+
+	ifaceCount, err := server.ifaceCount()
+	if err != nil {
+		return nil, err
+	}
+	if ifaceCount == 0 {
+		server.makeFirstIface()
 	}
 
 	router := mux.NewRouter()
