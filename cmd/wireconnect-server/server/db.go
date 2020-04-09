@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"syscall"
 
 	"golang.org/x/crypto/bcrypt"
@@ -13,31 +14,66 @@ import (
 )
 
 type User struct {
-	Username string
-	Password []byte
-	IsAdmin  bool
+	Username   string
+	Password   []byte
+	PeerConfig PeerConfig
+	IsAdmin    bool
 }
 
 type DBIface struct {
+	Name      string
+	Addresses []Address
+}
+
+type Address struct {
+	Address net.IP
+	Mask    net.IPMask
+}
+
+type PeerConfig struct {
 	Name    string
-	Address string
-	Mask    []byte
+	Address net.IP
+	Mask    net.IPMask
+	DBIface DBIface
 }
 
 func (s *Server) initDB() error {
-	_, err := s.db.Exec(
-		`CREATE TABLE IF NOT EXISTS users (
+	_, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS server_interfaces (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS server_addresses (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	address INTEGER NOT NULL,
+	mask INTEGER NOT NULL,
+	UNIQUE(address, mask)
+);
+
+CREATE TABLE IF NOT EXISTS server_interface_addresses (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	interface_id INTEGER NOT NULL,
+	address_id INTEGER NOT NULL,
+	FOREIGN KEY(interface_id) REFERENCES server_interface_addresses(id),
+	FOREIGN KEY (address_id)  REFERENCES addresses(id),
+	UNIQUE(interface_id, address_id)
+);
+
+CREATE TABLE IF NOT EXISTS peers (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	address INTEGER NOT NULL,
+	mask INTEGER NOT NULL,
+	server_interface_id INTEGER NOT NULL,
+	FOREIGN KEY(server_interface_id) REFERENCES server_interfaces(id)
+);
+
+CREATE TABLE IF NOT EXISTS users (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	username TEXT UNIQUE NOT NULL,
 	password TEXT NOT NULL,
-	is_admin BOOLEAN NOT NULL DEFAULT false
-);
-
-CREATE TABLE IF NOT EXISTS interfaces (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	name TEXT NOT NULL,
-	address TEXT NOT NULL,
-	mask INTEGER NOT NULL
+	peer_id INTEGER,
+	is_admin BOOLEAN NOT NULL DEFAULT false,
+	FOREIGN KEY(peer_id) REFERENCES peers(id)
 );`,
 	)
 
@@ -103,7 +139,7 @@ func (s *Server) userCount() (uint, error) {
 func (s *Server) ifaceCount() (uint, error) {
 	var count uint
 
-	row := s.db.QueryRow(`SELECT COUNT(*) FROM interfaces`)
+	row := s.db.QueryRow(`SELECT COUNT(*) FROM server_interfaces`)
 	switch err := row.Scan(&count); err {
 	case sql.ErrNoRows, nil:
 		return count, nil
@@ -135,30 +171,85 @@ func (s *Server) makeFirstUser() error {
 
 func (s *Server) makeFirstIface() error {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("Creating initial wireguard interface")
+	fmt.Println("Creating initial wireguard interface.")
 
-	fmt.Print("IP Address: ")
-	addr, err := reader.ReadString('\n')
-	if err != nil {
-		return err
+	var addresses []Address
+
+	for {
+		fmt.Println("Please enter a comma-seperated list of IP addresses in CIDR notation.")
+
+		fmt.Print("> ")
+		addr, err := reader.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		addr = addr[:len(addr)-1]
+
+		addresses, err = cidrList(addr)
+		if err != nil {
+			continue
+		}
+		break
 	}
-	addr = addr[:len(addr)-1]
 
-	ip, network, err := net.ParseCIDR(addr)
-	if err != nil {
-		return err
+	return s.addIface(
+		DBIface{
+			Name:      "wireconnect0",
+			Addresses: addresses,
+		},
+	)
+}
+
+func cidrList(s string) ([]Address, error) {
+	addresses := []Address{}
+
+	for _, addr := range strings.Split(s, ",") {
+		ip, net, err := net.ParseCIDR(addr)
+		if err != nil {
+			return nil, err
+		}
+		addresses = append(addresses, Address{Address: ip, Mask: net.Mask})
 	}
 
-	return s.addIface(DBIface{Name: "wireconnect0", Address: ip.String(), Mask: network.Mask})
+	return addresses, nil
 }
 
 func (s *Server) addIface(iface DBIface) error {
 	_, err := s.db.Exec(
-		`INSERT INTO interfaces (name, address, mask) VALUES (?, ?, ?)`,
+		`INSERT OR IGNORE INTO server_interfaces (name) VALUES (?)`,
 		iface.Name,
-		iface.Address,
-		iface.Mask,
 	)
+	if err != nil {
+		return err
+	}
 
-	return err
+	var ifaceID int
+	row := s.db.QueryRow(`SELECT id FROM server_interfaces WHERE name = ?`, iface.Name)
+	row.Scan(&ifaceID)
+
+	for _, addr := range iface.Addresses {
+		_, err = s.db.Exec(
+			`INSERT OR IGNORE INTO server_addresses (address, mask) VALUES (?, ?)`,
+			addr.Address,
+			addr.Mask,
+		)
+		if err != nil {
+			return err
+		}
+
+		var addrID int
+		row := s.db.QueryRow(`SELECT id FROM server_addresses WHERE address = ? AND mask = ?`, addr.Address, addr.Mask)
+		row.Scan(&addrID)
+
+		_, err = s.db.Exec(
+			`INSERT OR IGNORE INTO server_interface_addresses (interface_id, address_id) VALUES (?, ?)`,
+			ifaceID,
+			addrID,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

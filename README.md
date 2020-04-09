@@ -18,9 +18,6 @@ To-Do
 * Server:
 	* Force TLS
 	* Add routes for adding/modifying/deleting users
-	* Add server wireguard IP address(es)
-		* Might need to add table for interfaces
-	* Add user IP address to database
 	* Add code to configure wireguard interface(s)
 	* Make responses use JSON
 	* Add block time to rate-limit ban list (if feasible)

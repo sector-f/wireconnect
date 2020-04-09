@@ -61,7 +61,10 @@ func NewServer(conf Config) (*Server, error) {
 		WriteTimeout: conf.WriteTimeout,
 	}
 	server := Server{db, httpServer}
-	server.initDB()
+	err = server.initDB()
+	if err != nil {
+		return nil, err
+	}
 
 	userCount, err := server.userCount()
 	if err != nil {
