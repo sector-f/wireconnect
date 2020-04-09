@@ -253,3 +253,52 @@ func (s *Server) addIface(iface DBIface) error {
 
 	return nil
 }
+
+func (s *Server) ifaces() ([]DBIface, error) {
+	ifaces := []DBIface{}
+
+	rows, err := s.db.Query(`SELECT name FROM server_interfaces`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		ifaces = append(ifaces, DBIface{Name: name})
+	}
+
+	for i, iface := range ifaces {
+		rows, err := s.db.Query(
+			`SELECT address, mask
+			FROM       server_addresses           sa
+			INNER JOIN server_interface_addresses sia ON sia.address_id   = sa.id
+			INNER JOIN server_interfaces          si  ON sia.interface_id = si.id
+			WHERE si.name = ?`,
+			iface.Name,
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		addrs := []Address{}
+		for rows.Next() {
+			var address net.IP
+			var mask net.IPMask
+
+			if err := rows.Scan(&address, &mask); err != nil {
+				return nil, err
+			}
+
+			addrs = append(addrs, Address{Address: address, Mask: mask})
+		}
+
+		ifaces[i].Addresses = addrs
+	}
+
+	return ifaces, nil
+}

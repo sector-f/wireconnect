@@ -2,6 +2,7 @@ package server
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -80,6 +81,17 @@ func NewServer(conf Config) (*Server, error) {
 	}
 	if ifaceCount == 0 {
 		server.makeFirstIface()
+	}
+
+	ifaces, err := server.ifaces()
+	if err != nil {
+		return nil, err
+	}
+	for _, iface := range ifaces {
+		log.Printf("Creating interface %v\n", iface.Name)
+		for _, addr := range iface.Addresses {
+			log.Printf("\t%v/%v\n", addr.Address, cidr(addr.Mask))
+		}
 	}
 
 	router := mux.NewRouter()
