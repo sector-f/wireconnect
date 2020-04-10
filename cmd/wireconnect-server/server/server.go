@@ -100,11 +100,13 @@ func NewServer(conf Config) (*Server, error) {
 		return nil, err
 	}
 	for _, iface := range ifaces {
-		log.Printf("Creating interface %v\n", iface.Name)
+		if iface.CreateOnStartup {
+			log.Printf("Creating interface %v\n", iface.Name)
 
-		err = server.makeIface(iface)
-		if err != nil {
-			log.Fatal(err)
+			err = server.makeIface(iface)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 

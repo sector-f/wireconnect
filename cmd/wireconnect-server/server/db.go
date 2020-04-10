@@ -21,8 +21,9 @@ type User struct {
 }
 
 type DBIface struct {
-	Name      string
-	Addresses []Address
+	Name            string
+	CreateOnStartup bool
+	Addresses       []Address
 }
 
 type Address struct {
@@ -40,7 +41,8 @@ type PeerConfig struct {
 func (s *Server) initDB() error {
 	_, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS server_interfaces (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	name TEXT UNIQUE NOT NULL
+	name TEXT UNIQUE NOT NULL,
+	create_on_startup BOOLEAN NOT NULL DEFAULT true
 );
 
 CREATE TABLE IF NOT EXISTS server_addresses (
@@ -257,7 +259,7 @@ func (s *Server) addIface(iface DBIface) error {
 func (s *Server) ifaces() ([]DBIface, error) {
 	ifaces := []DBIface{}
 
-	rows, err := s.db.Query(`SELECT name FROM server_interfaces`)
+	rows, err := s.db.Query(`SELECT name, create_on_startup FROM server_interfaces`)
 	if err != nil {
 		return nil, err
 	}
@@ -265,10 +267,11 @@ func (s *Server) ifaces() ([]DBIface, error) {
 
 	for rows.Next() {
 		var name string
-		if err := rows.Scan(&name); err != nil {
+		var cos bool
+		if err := rows.Scan(&name, &cos); err != nil {
 			return nil, err
 		}
-		ifaces = append(ifaces, DBIface{Name: name})
+		ifaces = append(ifaces, DBIface{Name: name, CreateOnStartup: cos})
 	}
 
 	for i, iface := range ifaces {
