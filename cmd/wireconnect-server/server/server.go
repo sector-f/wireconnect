@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
-	// "github.com/WireGuard/wgctrl-go"
+	"golang.zx2c4.com/wireguard/wgctrl"
 )
 
 type route struct {
@@ -41,7 +41,8 @@ func NewConfig() Config {
 }
 
 type Server struct {
-	db *sql.DB
+	db       *sql.DB
+	wgClient *wgctrl.Client
 	*http.Server
 }
 
@@ -61,7 +62,18 @@ func NewServer(conf Config) (*Server, error) {
 		ReadTimeout:  conf.ReadTimeout,
 		WriteTimeout: conf.WriteTimeout,
 	}
-	server := Server{db, httpServer}
+
+	wgc, err := wgctrl.New()
+	if err != nil {
+		return nil, err
+	}
+
+	server := Server{
+		db:       db,
+		wgClient: wgc,
+		Server:   httpServer,
+	}
+
 	err = server.initDB()
 	if err != nil {
 		return nil, err
@@ -89,8 +101,10 @@ func NewServer(conf Config) (*Server, error) {
 	}
 	for _, iface := range ifaces {
 		log.Printf("Creating interface %v\n", iface.Name)
-		for _, addr := range iface.Addresses {
-			log.Printf("\t%v/%v\n", addr.Address, cidr(addr.Mask))
+
+		err = server.makeIface(iface)
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 
