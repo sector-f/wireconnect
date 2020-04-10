@@ -59,6 +59,9 @@ func (s *Server) shutdown() {
 
 	for name, link := range s.active {
 		log.Printf("Deleting interface: %s\n", name)
-		netlink.LinkDel(link)
+		err := netlink.LinkDel(link)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }
