@@ -22,6 +22,8 @@ func (s *Server) makeIface(iface DBIface) error {
 		return err
 	}
 
+	s.active[iface.Name] = link
+
 	for _, addr := range iface.Addresses {
 		log.Printf("\t%v/%v\n", addr.Address, cidr(addr.Mask))
 
@@ -50,4 +52,13 @@ func (s *Server) makeIface(iface DBIface) error {
 	err = s.wgClient.ConfigureDevice(iface.Name, wgConfig)
 
 	return nil
+}
+
+func (s *Server) shutdown() {
+	log.Println("Shutting down")
+
+	for name, link := range s.active {
+		log.Printf("Deleting interface: %s\n", name)
+		netlink.LinkDel(link)
+	}
 }

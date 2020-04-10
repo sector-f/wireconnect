@@ -5,11 +5,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl"
 )
 
@@ -43,6 +46,7 @@ func NewConfig() Config {
 type Server struct {
 	db       *sql.DB
 	wgClient *wgctrl.Client
+	active   map[string]netlink.Link
 	*http.Server
 }
 
@@ -71,6 +75,7 @@ func NewServer(conf Config) (*Server, error) {
 	server := Server{
 		db:       db,
 		wgClient: wgc,
+		active:   make(map[string]netlink.Link),
 		Server:   httpServer,
 	}
 
@@ -109,6 +114,26 @@ func NewServer(conf Config) (*Server, error) {
 			}
 		}
 	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		signal := <-sigChan
+
+		switch signal {
+		case syscall.SIGINT:
+			log.Println("Caught SIGINT")
+		case syscall.SIGTERM:
+			log.Println("Caught SIGTERM")
+		default:
+			// Shouldn't occur
+			log.Println("Caught signal")
+		}
+
+		server.shutdown()
+		os.Exit(1)
+	}()
 
 	router := mux.NewRouter()
 	routes := []route{
