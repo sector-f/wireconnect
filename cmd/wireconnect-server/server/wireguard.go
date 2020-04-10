@@ -22,7 +22,7 @@ func (s *Server) makeIface(iface DBIface) error {
 		return err
 	}
 
-	s.active[iface.Name] = link
+	s.active = append(s.active, link)
 
 	for _, addr := range iface.Addresses {
 		log.Printf("\t%v/%v\n", addr.Address, cidr(addr.Mask))
@@ -57,8 +57,8 @@ func (s *Server) makeIface(iface DBIface) error {
 func (s *Server) shutdown() {
 	log.Println("Shutting down")
 
-	for name, link := range s.active {
-		log.Printf("Deleting interface: %s\n", name)
+	for _, link := range s.active {
+		log.Printf("Deleting interface: %s\n", link.Attrs().Name)
 		err := netlink.LinkDel(link)
 		if err != nil {
 			log.Println(err)

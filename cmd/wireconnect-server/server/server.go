@@ -46,7 +46,7 @@ func NewConfig() Config {
 type Server struct {
 	db       *sql.DB
 	wgClient *wgctrl.Client
-	active   map[string]netlink.Link
+	active   []netlink.Link
 	*http.Server
 }
 
@@ -75,7 +75,7 @@ func NewServer(conf Config) (*Server, error) {
 	server := Server{
 		db:       db,
 		wgClient: wgc,
-		active:   make(map[string]netlink.Link),
+		active:   []netlink.Link{},
 		Server:   httpServer,
 	}
 
