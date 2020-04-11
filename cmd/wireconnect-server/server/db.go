@@ -42,7 +42,8 @@ func (s *Server) initDB() error {
 	_, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS server_interfaces (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT UNIQUE NOT NULL,
-	create_on_startup BOOLEAN NOT NULL DEFAULT true
+	create_on_startup BOOLEAN NOT NULL DEFAULT true,
+	UNIQUE(name)
 );
 
 CREATE TABLE IF NOT EXISTS server_addresses (
