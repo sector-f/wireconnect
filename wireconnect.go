@@ -32,5 +32,5 @@ func (a Address) String() string {
 		cidrmask += uint(bits.OnesCount(uint(b)))
 	}
 
-	return fmt.Sprintf("\t%v/%v", a.Address, cidrmask)
+	return fmt.Sprintf("%v/%v", a.Address, cidrmask)
 }
