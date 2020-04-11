@@ -14,10 +14,10 @@ import (
 )
 
 type User struct {
-	Username   string
-	Password   []byte
-	PeerConfig PeerConfig
-	IsAdmin    bool
+	Username    string
+	Password    []byte
+	PeerConfigs []PeerConfig
+	IsAdmin     bool
 }
 
 type DBIface struct {
@@ -61,21 +61,23 @@ CREATE TABLE IF NOT EXISTS server_interface_addresses (
 	UNIQUE(interface_id, address_id)
 );
 
-CREATE TABLE IF NOT EXISTS peers (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	address INTEGER NOT NULL,
-	mask INTEGER NOT NULL,
-	server_interface_id INTEGER NOT NULL,
-	FOREIGN KEY(server_interface_id) REFERENCES server_interfaces(id)
-);
-
 CREATE TABLE IF NOT EXISTS users (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	username TEXT UNIQUE NOT NULL,
 	password TEXT NOT NULL,
-	peer_id INTEGER,
 	is_admin BOOLEAN NOT NULL DEFAULT false,
-	FOREIGN KEY(peer_id) REFERENCES peers(id)
+);
+
+CREATE TABLE IF NOT EXISTS peers (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT NOT NULL,
+	address INTEGER NOT NULL,
+	mask INTEGER NOT NULL,
+	server_interface_id INTEGER NOT NULL,
+	user_id INTEGER NOT NULL,
+	FOREIGN KEY(server_interface_id) REFERENCES server_interfaces(id),
+	FOREIGN KEY(user_id) REFERENCES users(id),
+	UNIQUE(name, user_id)
 );`,
 	)
 
