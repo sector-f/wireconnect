@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/sector-f/wireconnect/cmd/wireconnect-server/database"
 	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl"
 )
@@ -44,7 +45,7 @@ func NewConfig() Config {
 }
 
 type Server struct {
-	db       *sql.DB
+	db       *database.ServiceDB
 	wgClient *wgctrl.Client
 	active   []netlink.Link
 	*http.Server
@@ -52,6 +53,11 @@ type Server struct {
 
 func NewServer(conf Config) (*Server, error) {
 	db, err := sql.Open("sqlite3", conf.DSN)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceDB, err := database.New(db)
 	if err != nil {
 		return nil, err
 	}
@@ -73,18 +79,13 @@ func NewServer(conf Config) (*Server, error) {
 	}
 
 	server := Server{
-		db:       db,
+		db:       serviceDB,
 		wgClient: wgc,
 		active:   []netlink.Link{},
 		Server:   httpServer,
 	}
 
-	err = server.initDB()
-	if err != nil {
-		return nil, err
-	}
-
-	userCount, err := server.userCount()
+	userCount, err := server.db.UserCount()
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +93,7 @@ func NewServer(conf Config) (*Server, error) {
 		server.makeFirstUser()
 	}
 
-	ifaceCount, err := server.ifaceCount()
+	ifaceCount, err := server.db.IfaceCount()
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func NewServer(conf Config) (*Server, error) {
 		server.makeFirstIface()
 	}
 
-	ifaces, err := server.ifaces()
+	ifaces, err := server.db.Ifaces()
 	if err != nil {
 		return nil, err
 	}

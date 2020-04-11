@@ -1,5 +1,14 @@
 package wireconnect
 
+import (
+	"net"
+)
+
+type Address struct {
+	Address net.IP
+	Mask    net.IPMask
+}
+
 type Request struct {
 	PublicKey string `json:"public_key"`
 }

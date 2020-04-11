@@ -5,11 +5,12 @@ import (
 	"log"
 	"net"
 
+	"github.com/sector-f/wireconnect/cmd/wireconnect-server/database"
 	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-func (s *Server) makeIface(iface DBIface) error {
+func (s *Server) makeIface(iface database.DBIface) error {
 	for _, link := range s.active {
 		if link.Attrs().Name == iface.Name {
 			if link.Type() == "wireguard" {
