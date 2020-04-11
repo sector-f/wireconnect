@@ -1,19 +1,51 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/sector-f/wireconnect"
 )
 
 var limiter = NewLimiter()
 
 func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
+	jsonDecoder := json.NewDecoder(r.Body)
+
 	username, _, _ := r.BasicAuth()
-	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, fmt.Sprintf("Successfully authenticated as %s\n", username))
+
+	request := wireconnect.ConnectionRequest{}
+	err := jsonDecoder.Decode(&request)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Improperly-formed request body")
+		return
+	}
+
+	peer := s.db.GetPeer(username, request.PeerName)
+	if peer == nil {
+		w.WriteHeader(http.StatusNotFound)
+		io.WriteString(w, "No peer with that name exists")
+		return
+	}
+
+	err = s.makeIface(peer.DBIface)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	wgDev, _ := s.wgClient.Device(peer.DBIface.Name)
+	resp := wireconnect.ConnectionReply{
+		PublicKey:     wgDev.PublicKey.String(),
+		ClientAddress: peer.Address.String(),
+	}
+
+	io.WriteString(w, fmt.Sprintf("%v", resp))
 }
 
 func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {

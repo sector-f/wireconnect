@@ -109,7 +109,7 @@ func NewServer(conf Config) (*Server, error) {
 		if iface.CreateOnStartup {
 			log.Printf("Creating interface %v\n", iface.Name)
 
-			err = server.makeIface(iface)
+			err = server.makeIface(&iface)
 			if err != nil {
 				log.Fatal(err)
 			}
