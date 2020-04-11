@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"log"
 	"net"
 
@@ -9,6 +10,16 @@ import (
 )
 
 func (s *Server) makeIface(iface DBIface) error {
+	for _, link := range s.active {
+		if link.Attrs().Name == iface.Name {
+			if link.Type() == "wireguard" {
+				return nil
+			} else {
+				return errors.New("Interface exists but is not WireGuard interface")
+			}
+		}
+	}
+
 	linkAttrs := netlink.NewLinkAttrs()
 
 	linkAttrs.Name = iface.Name
