@@ -1,16 +1,11 @@
-package server
+package database
 
 import (
-	"bufio"
 	"database/sql"
-	"fmt"
 	"net"
-	"os"
-	"syscall"
 
 	"github.com/sector-f/wireconnect"
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 type ServiceDB struct {
@@ -75,7 +70,7 @@ CREATE TABLE IF NOT EXISTS users (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	username TEXT UNIQUE NOT NULL,
 	password TEXT NOT NULL,
-	is_admin BOOLEAN NOT NULL DEFAULT false,
+	is_admin BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS peers (
@@ -160,60 +155,6 @@ func (s *ServiceDB) IfaceCount() (uint, error) {
 	default:
 		return 0, err
 	}
-}
-
-// TODO: Move this outside this package
-func (s *ServiceDB) makeFirstUser() error {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("Creating initial admin user")
-
-	fmt.Print("Username: ")
-	username, err := reader.ReadString('\n')
-	if err != nil {
-		return err
-	}
-	username = username[:len(username)-1]
-
-	fmt.Print("Password: ")
-	password, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		return err
-	}
-	fmt.Println()
-
-	return s.AddUser(User{Username: username, Password: password, IsAdmin: true})
-}
-
-// TODO: Move this outside this package
-func (s *ServiceDB) makeFirstIface() error {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("Creating initial wireguard interface.")
-
-	var addresses []wireconnect.Address
-
-	for {
-		fmt.Println("Please enter a comma-seperated list of IP addresses in CIDR notation.")
-
-		fmt.Print("> ")
-		addr, err := reader.ReadString('\n')
-		if err != nil {
-			return err
-		}
-		addr = addr[:len(addr)-1]
-
-		addresses, err = CidrList(addr)
-		if err != nil {
-			continue
-		}
-		break
-	}
-
-	return s.AddIface(
-		DBIface{
-			Name:      "wireconnect0",
-			Addresses: addresses,
-		},
-	)
 }
 
 func (s *ServiceDB) AddIface(iface DBIface) error {

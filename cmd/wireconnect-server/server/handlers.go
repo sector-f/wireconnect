@@ -33,7 +33,7 @@ func (s *Server) adminHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, _, _ := r.BasicAuth()
 
-		isAdmin, err := s.isAdmin(username)
+		isAdmin, err := s.db.IsAdmin(username)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			io.WriteString(w, "Internal server error\n")
@@ -73,7 +73,7 @@ func (s *Server) authLimit(h http.Handler) http.Handler {
 			return
 		}
 
-		err := s.authenticate(username, password)
+		err := s.db.Authenticate(username, password)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			io.WriteString(w, "Bad username or password\n")
