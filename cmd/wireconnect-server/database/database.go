@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"syscall"
 
 	"github.com/sector-f/wireconnect"
@@ -95,7 +94,7 @@ CREATE TABLE IF NOT EXISTS peers (
 	return err
 }
 
-func (s *ServiceDB) authenticate(username, password string) error {
+func (s *ServiceDB) Authenticate(username, password string) error {
 	var dbPass string
 
 	row := s.db.QueryRow(`SELECT password FROM users WHERE username = ?`, username)
@@ -109,7 +108,7 @@ func (s *ServiceDB) authenticate(username, password string) error {
 	}
 }
 
-func (s *ServiceDB) isAdmin(username string) (bool, error) {
+func (s *ServiceDB) IsAdmin(username string) (bool, error) {
 	var isAdmin bool
 
 	row := s.db.QueryRow(`SELECT is_admin FROM users WHERE username = ?`, username)
@@ -123,7 +122,7 @@ func (s *ServiceDB) isAdmin(username string) (bool, error) {
 	}
 }
 
-func (s *ServiceDB) addUser(user User) error {
+func (s *ServiceDB) AddUser(user User) error {
 	hashedPw, err := bcrypt.GenerateFromPassword(user.Password, bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -139,7 +138,7 @@ func (s *ServiceDB) addUser(user User) error {
 	return err
 }
 
-func (s *ServiceDB) userCount() (uint, error) {
+func (s *ServiceDB) UserCount() (uint, error) {
 	var count uint
 
 	row := s.db.QueryRow(`SELECT COUNT(*) FROM users`)
@@ -151,7 +150,7 @@ func (s *ServiceDB) userCount() (uint, error) {
 	}
 }
 
-func (s *ServiceDB) ifaceCount() (uint, error) {
+func (s *ServiceDB) IfaceCount() (uint, error) {
 	var count uint
 
 	row := s.db.QueryRow(`SELECT COUNT(*) FROM server_interfaces`)
@@ -182,7 +181,7 @@ func (s *ServiceDB) makeFirstUser() error {
 	}
 	fmt.Println()
 
-	return s.addUser(User{Username: username, Password: password, IsAdmin: true})
+	return s.AddUser(User{Username: username, Password: password, IsAdmin: true})
 }
 
 // TODO: Move this outside this package
@@ -202,14 +201,14 @@ func (s *ServiceDB) makeFirstIface() error {
 		}
 		addr = addr[:len(addr)-1]
 
-		addresses, err = cidrList(addr)
+		addresses, err = CidrList(addr)
 		if err != nil {
 			continue
 		}
 		break
 	}
 
-	return s.addIface(
+	return s.AddIface(
 		DBIface{
 			Name:      "wireconnect0",
 			Addresses: addresses,
@@ -217,21 +216,7 @@ func (s *ServiceDB) makeFirstIface() error {
 	)
 }
 
-func cidrList(s string) ([]wireconnect.Address, error) {
-	addresses := []wireconnect.Address{}
-
-	for _, addr := range strings.Split(s, ",") {
-		ip, net, err := net.ParseCIDR(addr)
-		if err != nil {
-			return nil, err
-		}
-		addresses = append(addresses, wireconnect.Address{Address: ip, Mask: net.Mask})
-	}
-
-	return addresses, nil
-}
-
-func (s *ServiceDB) addIface(iface DBIface) error {
+func (s *ServiceDB) AddIface(iface DBIface) error {
 	_, err := s.db.Exec(
 		`INSERT OR IGNORE INTO server_interfaces (name) VALUES (?)`,
 		iface.Name,
@@ -271,7 +256,7 @@ func (s *ServiceDB) addIface(iface DBIface) error {
 	return nil
 }
 
-func (s *ServiceDB) ifaces() ([]DBIface, error) {
+func (s *ServiceDB) Ifaces() ([]DBIface, error) {
 	ifaces := []DBIface{}
 
 	rows, err := s.db.Query(`SELECT name, create_on_startup FROM server_interfaces`)
