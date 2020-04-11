@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/sector-f/wireconnect"
 	"github.com/sector-f/wireconnect/cmd/wireconnect-server/database"
 	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -64,6 +65,44 @@ func (s *Server) makeIface(iface *database.DBIface) error {
 	err = s.wgClient.ConfigureDevice(iface.Name, wgConfig)
 
 	return nil
+}
+
+func (s *Server) addPeer(request wireconnect.ConnectionRequest, peerConfig *database.PeerConfig) error {
+	dev, err := s.wgClient.Device(peerConfig.DBIface.Name)
+	if err != nil {
+		return err
+	}
+
+	key, err := wgtypes.ParseKey(request.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	config := wgtypes.Config{
+		PrivateKey:   &dev.PrivateKey,
+		ListenPort:   &dev.ListenPort,
+		FirewallMark: &dev.FirewallMark,
+		ReplacePeers: false,
+		Peers: []wgtypes.PeerConfig{
+			wgtypes.PeerConfig{
+				PublicKey:                   key,
+				Remove:                      false,
+				UpdateOnly:                  false,
+				PresharedKey:                nil,
+				Endpoint:                    nil, // TODO: Get this from http request IP?
+				PersistentKeepaliveInterval: nil,
+				ReplaceAllowedIPs:           true, // Probably not needed
+				AllowedIPs: []net.IPNet{
+					net.IPNet{
+						IP:   peerConfig.Address.Address,
+						Mask: net.IPv4Mask(255, 255, 255, 255),
+					},
+				},
+			},
+		},
+	}
+
+	return s.wgClient.ConfigureDevice(peerConfig.DBIface.Name, config)
 }
 
 func (s *Server) shutdown() {

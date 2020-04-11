@@ -168,6 +168,16 @@ func NewServer(conf Config) (*Server, error) {
 				},
 			},
 		},
+		route{
+			pattern: "/peers",
+			handlers: []handler{
+				handler{
+					method:      "POST",
+					handlerFunc: server.createPeerHandler,
+					needsAdmin:  false,
+				},
+			},
+		},
 	}
 
 	for _, route := range routes {

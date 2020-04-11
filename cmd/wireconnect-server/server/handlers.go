@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -12,6 +13,35 @@ import (
 )
 
 var limiter = NewLimiter()
+
+func (s *Server) createPeerHandler(w http.ResponseWriter, r *http.Request) {
+	jsonDecoder := json.NewDecoder(r.Body)
+
+	username, _, _ := r.BasicAuth()
+
+	request := wireconnect.CreatePeerRequest{}
+	err := jsonDecoder.Decode(&request)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Improperly-formed request body")
+		return
+	}
+
+	if request.Name == "" || request.Address == "" || request.ServerInterface == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Incomplete request")
+		return
+	}
+
+	err = s.db.CreatePeer(username, request)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
 
 func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
 	jsonDecoder := json.NewDecoder(r.Body)
@@ -26,6 +56,12 @@ func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if request.PeerName == "" || request.PublicKey == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Incomplete request")
+		return
+	}
+
 	peer := s.db.GetPeer(username, request.PeerName)
 	if peer == nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -34,6 +70,12 @@ func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.makeIface(peer.DBIface)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = s.addPeer(request, peer)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

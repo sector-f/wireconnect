@@ -16,6 +16,16 @@ type ConnectionReply struct {
 	ClientAddress string `json:"client_address"`
 }
 
+type CreatePeerRequest struct {
+	Name            string `json:"name"`
+	Address         string `json:"address"`
+	ServerInterface string `json:"server_interface"`
+}
+
+type DisconnectionRequest struct {
+	Peers []string `json:"peers"`
+}
+
 type BanList struct {
 	Addresses []string
 }
@@ -33,4 +43,13 @@ func (a Address) String() string {
 	}
 
 	return fmt.Sprintf("%v/%v", a.Address, cidrmask)
+}
+
+func ParseAddress(s string) (Address, error) {
+	ip, net, err := net.ParseCIDR(s)
+	if err != nil {
+		return Address{}, err
+	}
+
+	return Address{ip, net.Mask}, nil
 }
