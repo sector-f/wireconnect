@@ -1,19 +1,93 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/sector-f/wireconnect"
 )
 
 var limiter = NewLimiter()
 
-func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) createPeerHandler(w http.ResponseWriter, r *http.Request) {
+	jsonDecoder := json.NewDecoder(r.Body)
+
 	username, _, _ := r.BasicAuth()
-	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, fmt.Sprintf("Successfully authenticated as %s\n", username))
+
+	request := wireconnect.CreatePeerRequest{}
+	err := jsonDecoder.Decode(&request)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Improperly-formed request body")
+		return
+	}
+
+	if request.Name == "" || request.Address == "" || request.ServerInterface == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Incomplete request")
+		return
+	}
+
+	err = s.db.CreatePeer(username, request)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
+	jsonDecoder := json.NewDecoder(r.Body)
+
+	username, _, _ := r.BasicAuth()
+
+	request := wireconnect.ConnectionRequest{}
+	err := jsonDecoder.Decode(&request)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Improperly-formed request body")
+		return
+	}
+
+	if request.PeerName == "" || request.PublicKey == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Incomplete request")
+		return
+	}
+
+	peer := s.db.GetPeer(username, request.PeerName)
+	if peer == nil {
+		w.WriteHeader(http.StatusNotFound)
+		io.WriteString(w, "No peer with that name exists")
+		return
+	}
+
+	err = s.makeIface(peer.DBIface)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = s.addPeer(request, peer)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	wgDev, _ := s.wgClient.Device(peer.DBIface.Name)
+	resp := wireconnect.ConnectionReply{
+		PublicKey:     wgDev.PublicKey.String(),
+		ClientAddress: peer.Address.String(),
+	}
+
+	io.WriteString(w, fmt.Sprintf("%v", resp))
 }
 
 func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {

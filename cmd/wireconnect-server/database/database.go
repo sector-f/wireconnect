@@ -42,6 +42,75 @@ type PeerConfig struct {
 	DBIface *DBIface
 }
 
+func (s *ServiceDB) CreatePeer(user string, peer wireconnect.CreatePeerRequest) error {
+	peerAddr, err := wireconnect.ParseAddress(peer.Address)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Exec(
+		`INSERT INTO peers (name, address, mask, server_interface_id, user_id)
+		VALUES (
+			?,
+			?,
+			?,
+			(SELECT id FROM server_interfaces WHERE name = ?),
+			(SELECT id FROM users WHERE username = ?)
+		)`,
+		peer.Name,
+		peerAddr.Address,
+		peerAddr.Mask,
+		peer.ServerInterface,
+		user,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *ServiceDB) GetPeer(username, peername string) *PeerConfig {
+	row := s.db.QueryRow(
+		`SELECT address, mask, server_interface_id
+		FROM peers
+		WHERE user_id = (SELECT id FROM users WHERE username = ?)
+		AND name = ?`,
+		username,
+		peername,
+	)
+
+	var addr wireconnect.Address
+	var ifaceID int
+
+	err := row.Scan(&addr.Address, &addr.Mask, &ifaceID)
+	if err != nil {
+		return nil
+	}
+
+	return &PeerConfig{
+		Name:    peername,
+		Address: addr,
+		DBIface: s.getIfaceFromID(ifaceID),
+	}
+}
+
+func (s *ServiceDB) getIfaceFromID(id int) *DBIface {
+	row := s.db.QueryRow(
+		`SELECT name, create_on_startup FROM server_interfaces WHERE id = ?`,
+		id,
+	)
+
+	iface := DBIface{}
+
+	err := row.Scan(&iface.Name, &iface.CreateOnStartup)
+	if err != nil {
+		return nil
+	}
+
+	return &iface
+}
+
 func (s *ServiceDB) initDB() error {
 	_, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS server_interfaces (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
