@@ -67,7 +67,12 @@ func (s *Server) makeIface(iface *database.DBIface) error {
 	return nil
 }
 
-func (s *Server) addPeer(request wireconnect.ConnectionRequest, peerConfig *database.PeerConfig) error {
+func (s *Server) addPeer(username string, request wireconnect.ConnectionRequest) error {
+	peerConfig := s.db.GetPeer(username, request.PeerName)
+	if peerConfig == nil {
+		return errors.New("Peer does not exist")
+	}
+
 	dev, err := s.wgClient.Device(peerConfig.DBIface.Name)
 	if err != nil {
 		return err

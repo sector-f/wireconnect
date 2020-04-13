@@ -75,7 +75,7 @@ func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.addPeer(request, peer)
+	err = s.addPeer(username, request)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
