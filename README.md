@@ -18,9 +18,9 @@ To-Do
 * Server:
 	* Force TLS
 	* Add routes for adding/modifying/deleting users
-	* Add code to configure wireguard interface(s)
 	* Make responses use JSON
 	* Add block time to rate-limit ban list (if feasible)
+	* Add post-up/post-down hooks
 
 * Client:
 	* Implement everything
