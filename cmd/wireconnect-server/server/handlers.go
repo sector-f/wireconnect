@@ -91,9 +91,32 @@ func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
+	jsonDecoder := json.NewDecoder(r.Body)
+
 	username, _, _ := r.BasicAuth()
-	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, fmt.Sprintf("Successfully authenticated as %s\n", username))
+
+	request := wireconnect.DisconnectionRequest{}
+	err := jsonDecoder.Decode(&request)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Improperly-formed request body")
+		return
+	}
+
+	if request.PeerName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Incomplete request")
+		return
+	}
+
+	err = s.removePeer(username, request.PeerName)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Unable to disconnect peer")
+		return
+	}
+
+	io.WriteString(w, fmt.Sprintf("Disconnected peer: %s\n", request.PeerName))
 }
 
 func (s *Server) getBansHandler(w http.ResponseWriter, r *http.Request) {

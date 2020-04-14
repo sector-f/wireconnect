@@ -23,7 +23,7 @@ type CreatePeerRequest struct {
 }
 
 type DisconnectionRequest struct {
-	Peers []string `json:"peers"`
+	PeerName string `json:"peer_name"`
 }
 
 type BanList struct {

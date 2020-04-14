@@ -12,7 +12,7 @@ import (
 )
 
 func (s *Server) makeIface(iface *database.DBIface) error {
-	for _, link := range s.active {
+	for _, link := range s.activeInterfaces {
 		if link.Attrs().Name == iface.Name {
 			if link.Type() == "wireguard" {
 				return nil
@@ -35,7 +35,7 @@ func (s *Server) makeIface(iface *database.DBIface) error {
 		return err
 	}
 
-	s.active = append(s.active, link)
+	s.activeInterfaces = append(s.activeInterfaces, link)
 
 	for _, addr := range iface.Addresses {
 		log.Printf("\t%v/%v\n", addr.Address, cidr(addr.Mask))
@@ -107,13 +107,63 @@ func (s *Server) addPeer(username string, request wireconnect.ConnectionRequest)
 		},
 	}
 
-	return s.wgClient.ConfigureDevice(peerConfig.DBIface.Name, config)
+	err = s.wgClient.ConfigureDevice(peerConfig.DBIface.Name, config)
+	if err != nil {
+		return err
+	}
+
+	usermap, present := s.activePeers[username]
+	if !present {
+		usermap = make(map[string]wgtypes.Key)
+		s.activePeers[username] = usermap
+	}
+	usermap[request.PeerName] = key
+	return nil
+}
+
+func (s *Server) removePeer(username, peername string) error {
+	pubkey, present := s.activePeers[username][peername]
+	if !present {
+		return errors.New("Peer is not active")
+	}
+
+	peerConfig := s.db.GetPeer(username, peername)
+	if peerConfig == nil {
+		return errors.New("Peer does not exist")
+	}
+
+	dev, err := s.wgClient.Device(peerConfig.DBIface.Name)
+	if err != nil {
+		return err
+	}
+
+	config := wgtypes.Config{
+		PrivateKey:   &dev.PrivateKey,
+		ListenPort:   &dev.ListenPort,
+		FirewallMark: &dev.FirewallMark,
+		ReplacePeers: false,
+		Peers: []wgtypes.PeerConfig{
+			wgtypes.PeerConfig{
+				PublicKey:  pubkey,
+				Remove:     true,
+				UpdateOnly: true,
+			},
+		},
+	}
+
+	err = s.wgClient.ConfigureDevice(peerConfig.DBIface.Name, config)
+	if err != nil {
+		return err
+	}
+
+	delete(s.activePeers[username], peername)
+	return nil
 }
 
 func (s *Server) shutdown() {
 	log.Println("Shutting down")
 
-	for _, link := range s.active {
+	for _, link := range s.activeInterfaces {
 		log.Printf("Deleting interface: %s\n", link.Attrs().Name)
 		err := netlink.LinkDel(link)
 		if err != nil {

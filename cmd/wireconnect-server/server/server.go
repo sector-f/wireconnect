@@ -15,6 +15,7 @@ import (
 	"github.com/sector-f/wireconnect/cmd/wireconnect-server/database"
 	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 type route struct {
@@ -45,9 +46,10 @@ func NewConfig() Config {
 }
 
 type Server struct {
-	db       *database.ServiceDB
-	wgClient *wgctrl.Client
-	active   []netlink.Link
+	db               *database.ServiceDB
+	wgClient         *wgctrl.Client
+	activeInterfaces []netlink.Link
+	activePeers      map[string]map[string]wgtypes.Key // Map users to peers; O(1) time
 	*http.Server
 }
 
@@ -79,10 +81,11 @@ func NewServer(conf Config) (*Server, error) {
 	}
 
 	server := Server{
-		db:       serviceDB,
-		wgClient: wgc,
-		active:   []netlink.Link{},
-		Server:   httpServer,
+		db:               serviceDB,
+		wgClient:         wgc,
+		activeInterfaces: []netlink.Link{},
+		activePeers:      make(map[string]map[string]wgtypes.Key),
+		Server:           httpServer,
 	}
 
 	userCount, err := server.db.UserCount()
