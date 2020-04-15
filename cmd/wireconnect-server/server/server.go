@@ -214,6 +214,9 @@ func NewServer(conf Config) (*Server, error) {
 		router.Path(route.pattern).Handler(methodHandler)
 	}
 
+	router.Path("/usertest").Methods("GET").Handler(jsonHandler(jsonUsernameTest))
+	// router.HandleFunc("/usertest", jsonHandler(jsonUsernameTest)).Methods("GET")
+
 	httpServer.Handler = handlers.LoggingHandler(os.Stdout, router)
 
 	return &server, nil
