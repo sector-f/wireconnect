@@ -17,7 +17,8 @@ type ConnectionReply struct {
 }
 
 type CreatePeerRequest struct {
-	Name            string `json:"name"`
+	UserName        string `json:"user_name"`
+	PeerName        string `json:"peer_name"`
 	Address         string `json:"address"`
 	ServerInterface string `json:"server_interface"`
 }

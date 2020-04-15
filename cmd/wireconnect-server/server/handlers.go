@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -17,8 +16,6 @@ var limiter = NewLimiter()
 func (s *Server) createPeerHandler(w http.ResponseWriter, r *http.Request) {
 	jsonDecoder := json.NewDecoder(r.Body)
 
-	username, _, _ := r.BasicAuth()
-
 	request := wireconnect.CreatePeerRequest{}
 	err := jsonDecoder.Decode(&request)
 	if err != nil {
@@ -27,15 +24,14 @@ func (s *Server) createPeerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if request.Name == "" || request.Address == "" || request.ServerInterface == "" {
+	if request.UserName == "" || request.PeerName == "" || request.Address == "" || request.ServerInterface == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		io.WriteString(w, "Incomplete request")
 		return
 	}
 
-	err = s.db.CreatePeer(username, request)
+	err = s.db.CreatePeer(request)
 	if err != nil {
-		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

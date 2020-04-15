@@ -10,7 +10,7 @@ type PeerConfig struct {
 	DBIface *DBIface
 }
 
-func (s *ServiceDB) CreatePeer(user string, peer wireconnect.CreatePeerRequest) error {
+func (s *ServiceDB) CreatePeer(peer wireconnect.CreatePeerRequest) error {
 	peerAddr, err := wireconnect.ParseAddress(peer.Address)
 	if err != nil {
 		return err
@@ -25,11 +25,11 @@ func (s *ServiceDB) CreatePeer(user string, peer wireconnect.CreatePeerRequest) 
 			(SELECT id FROM server_interfaces WHERE name = ?),
 			(SELECT id FROM users WHERE username = ?)
 		)`,
-		peer.Name,
+		peer.PeerName,
 		peerAddr.Address,
 		peerAddr.Mask,
 		peer.ServerInterface,
-		user,
+		peer.UserName,
 	)
 	if err != nil {
 		return err

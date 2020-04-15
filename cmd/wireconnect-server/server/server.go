@@ -177,7 +177,7 @@ func NewServer(conf Config) (*Server, error) {
 				handler{
 					method:      "POST",
 					handlerFunc: server.createPeerHandler,
-					needsAdmin:  false,
+					needsAdmin:  true,
 				},
 			},
 		},
