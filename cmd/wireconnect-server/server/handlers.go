@@ -13,6 +13,27 @@ import (
 
 var limiter = NewLimiter()
 
+func (s *Server) getInterfacesHandler(w http.ResponseWriter, r *http.Request) {
+	interfaces, err := s.db.Ifaces()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	wireIfaces := []wireconnect.ServerInterface{}
+	for _, iface := range interfaces {
+		wireIfaces = append(
+			wireIfaces,
+			wireconnect.ServerInterface{
+				Name:      iface.Name,
+				Addresses: iface.Addresses,
+			},
+		)
+	}
+
+	io.WriteString(w, fmt.Sprintf("%v", wireIfaces))
+}
+
 func (s *Server) createPeerHandler(w http.ResponseWriter, r *http.Request) {
 	jsonDecoder := json.NewDecoder(r.Body)
 

@@ -6,6 +6,11 @@ import (
 	"net"
 )
 
+type ServerInterface struct {
+	Name      string    `json:"name"`
+	Addresses []Address `json:"addresses"`
+}
+
 type ConnectionRequest struct {
 	PeerName  string `json:"peer_name"`
 	PublicKey string `json:"public_key"`
@@ -32,8 +37,8 @@ type BanList struct {
 }
 
 type Address struct {
-	Address net.IP
-	Mask    net.IPMask
+	Address net.IP     `json:"address"`
+	Mask    net.IPMask `json:"mask"`
 }
 
 func (a Address) String() string {

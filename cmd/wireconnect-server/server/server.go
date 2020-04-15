@@ -181,6 +181,16 @@ func NewServer(conf Config) (*Server, error) {
 				},
 			},
 		},
+		route{
+			pattern: "/interfaces",
+			handlers: []handler{
+				handler{
+					method:      "GET",
+					handlerFunc: server.getInterfacesHandler,
+					needsAdmin:  false,
+				},
+			},
+		},
 	}
 
 	for _, route := range routes {
