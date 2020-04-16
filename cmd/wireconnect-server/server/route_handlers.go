@@ -46,7 +46,7 @@ func (s *Server) getInterfacesHandler(r *http.Request) (*wireconnect.SuccessResp
 			wireIfaces,
 			wireconnect.ServerInterface{
 				Name:      iface.Name,
-				Addresses: iface.Addresses, // TODO: convert this to string properly
+				Addresses: iface.Addresses,
 			},
 		)
 	}

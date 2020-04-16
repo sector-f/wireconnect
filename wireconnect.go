@@ -1,6 +1,7 @@
 package wireconnect
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/bits"
 	"net"
@@ -29,7 +30,21 @@ func (e ErrorResponse) Error() string {
 
 type ServerInterface struct {
 	Name      string    `json:"name"`
-	Addresses []Address `json:"addresses"`
+	Addresses []Address `json:"addresses"` // TODO: Maybe change this to []string?
+}
+
+func (s ServerInterface) MarshalJSON() ([]byte, error) {
+	retAddr := []string{}
+	for _, addr := range s.Addresses {
+		retAddr = append(retAddr, addr.String())
+	}
+
+	retVal := struct {
+		Name      string   `json:"name"`
+		Addresses []string `json:"addresses"`
+	}{s.Name, retAddr}
+
+	return json.Marshal(&retVal)
 }
 
 type ConnectionRequest struct {
