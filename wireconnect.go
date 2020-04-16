@@ -4,7 +4,28 @@ import (
 	"fmt"
 	"math/bits"
 	"net"
+	"net/http"
 )
+
+var (
+	DatabaseError      = ErrorResponse{http.StatusInternalServerError, "Database error"}
+	ParseJsonError     = ErrorResponse{http.StatusBadRequest, "Improperly-formed request body"}
+	IncompleteReqError = ErrorResponse{http.StatusBadRequest, "Incomplete request"}
+)
+
+type SuccessResponse struct {
+	Status  int
+	Payload interface{}
+}
+
+type ErrorResponse struct {
+	Status  int
+	Message string
+}
+
+func (e ErrorResponse) Error() string {
+	return e.Message
+}
 
 type ServerInterface struct {
 	Name      string    `json:"name"`

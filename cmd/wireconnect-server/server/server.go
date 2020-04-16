@@ -25,7 +25,7 @@ type route struct {
 
 type handler struct {
 	method      string
-	handlerFunc http.HandlerFunc
+	handlerFunc apiFunc
 	needsAdmin  bool
 }
 
@@ -196,7 +196,7 @@ func NewServer(conf Config) (*Server, error) {
 	for _, route := range routes {
 		methodHandler := make(handlers.MethodHandler)
 		for _, handler := range route.handlers {
-			var h http.Handler = handler.handlerFunc
+			var h http.Handler = jsonHandler(handler.handlerFunc)
 
 			if handler.needsAdmin {
 				h = server.adminHandler(h)
@@ -213,9 +213,6 @@ func NewServer(conf Config) (*Server, error) {
 
 		router.Path(route.pattern).Handler(methodHandler)
 	}
-
-	router.Path("/usertest").Methods("GET").Handler(jsonHandler(jsonUsernameTest))
-	// router.HandleFunc("/usertest", jsonHandler(jsonUsernameTest)).Methods("GET")
 
 	httpServer.Handler = handlers.LoggingHandler(os.Stdout, router)
 
