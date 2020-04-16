@@ -64,6 +64,12 @@ type CreatePeerRequest struct {
 	ServerInterface string `json:"server_interface"`
 }
 
+type CreateUserRequest struct {
+	UserName string `json:"user_name"`
+	Password string `json:"password"`
+	IsAdmin  bool   `json:"is_admin"`
+}
+
 type DisconnectionRequest struct {
 	PeerName string `json:"peer_name"`
 }

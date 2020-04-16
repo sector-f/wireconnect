@@ -191,6 +191,16 @@ func NewServer(conf Config) (*Server, error) {
 				},
 			},
 		},
+		route{
+			pattern: "/users",
+			handlers: []handler{
+				handler{
+					method:      "POST",
+					handlerFunc: server.addUserHandler,
+					needsAdmin:  true,
+				},
+			},
+		},
 	}
 
 	for _, route := range routes {

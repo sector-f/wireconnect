@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/sector-f/wireconnect"
+	"github.com/sector-f/wireconnect/cmd/wireconnect-server/database"
 )
 
 var limiter = NewLimiter()
@@ -116,4 +117,29 @@ func (s *Server) disconnectHandler(r *http.Request) (*wireconnect.SuccessRespons
 	}
 
 	return &wireconnect.SuccessResponse{http.StatusOK, fmt.Sprintf("Disconnected peer: %s\n", request.PeerName)}, nil
+}
+
+func (s *Server) addUserHandler(r *http.Request) (*wireconnect.SuccessResponse, error) {
+	jsonDecoder := json.NewDecoder(r.Body)
+
+	request := wireconnect.CreateUserRequest{}
+	err := jsonDecoder.Decode(&request)
+	if err != nil {
+		return nil, wireconnect.ParseJsonError
+	}
+
+	if request.UserName == "" || request.Password == "" {
+		return nil, wireconnect.IncompleteReqError
+	}
+
+	err = s.db.AddUser(database.User{
+		Username: request.UserName,
+		Password: []byte(request.Password),
+		IsAdmin:  request.IsAdmin,
+	})
+	if err != nil {
+		return nil, wireconnect.DatabaseError
+	}
+
+	return &wireconnect.SuccessResponse{http.StatusCreated, "User created"}, nil
 }
