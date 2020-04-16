@@ -3,10 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	// "io"
-	// "net"
 	"net/http"
-	// "strings"
 
 	"github.com/sector-f/wireconnect"
 )
