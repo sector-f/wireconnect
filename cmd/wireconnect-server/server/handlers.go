@@ -2,8 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -11,115 +9,39 @@ import (
 	"github.com/sector-f/wireconnect"
 )
 
-var limiter = NewLimiter()
+type apiFunc = func(*http.Request) (*wireconnect.SuccessResponse, error)
 
-func (s *Server) createPeerHandler(w http.ResponseWriter, r *http.Request) {
-	jsonDecoder := json.NewDecoder(r.Body)
+func jsonHandler(internal apiFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		returnVal, err := internal(r)
+		if err != nil {
+			switch val := err.(type) {
+			case wireconnect.ErrorResponse:
+				w.WriteHeader(val.Status)
 
-	request := wireconnect.CreatePeerRequest{}
-	err := jsonDecoder.Decode(&request)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, "Improperly-formed request body")
-		return
-	}
+				json, err := json.MarshalIndent(val, "", "  ")
+				if err != nil {
+					w.Write([]byte(val.Message))
+					return
+				}
 
-	if request.UserName == "" || request.PeerName == "" || request.Address == "" || request.ServerInterface == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, "Incomplete request")
-		return
-	}
+				w.Write(append(json, byte('\n')))
+				return
+			default:
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
 
-	err = s.db.CreatePeer(request)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+		json, err := json.MarshalIndent(returnVal.Payload, "", "  ")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-	w.WriteHeader(http.StatusCreated)
-}
-
-func (s *Server) connectHandler(w http.ResponseWriter, r *http.Request) {
-	jsonDecoder := json.NewDecoder(r.Body)
-
-	username, _, _ := r.BasicAuth()
-
-	request := wireconnect.ConnectionRequest{}
-	err := jsonDecoder.Decode(&request)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, "Improperly-formed request body")
-		return
-	}
-
-	if request.PeerName == "" || request.PublicKey == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, "Incomplete request")
-		return
-	}
-
-	peer := s.db.GetPeer(username, request.PeerName)
-	if peer == nil {
-		w.WriteHeader(http.StatusNotFound)
-		io.WriteString(w, "No peer with that name exists")
-		return
-	}
-
-	err = s.makeIface(peer.DBIface)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	err = s.addPeer(username, request)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	wgDev, _ := s.wgClient.Device(peer.DBIface.Name)
-	resp := wireconnect.ConnectionReply{
-		PublicKey:     wgDev.PublicKey.String(),
-		ClientAddress: peer.Address.String(),
-	}
-
-	io.WriteString(w, fmt.Sprintf("%v", resp))
-}
-
-func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
-	jsonDecoder := json.NewDecoder(r.Body)
-
-	username, _, _ := r.BasicAuth()
-
-	request := wireconnect.DisconnectionRequest{}
-	err := jsonDecoder.Decode(&request)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, "Improperly-formed request body")
-		return
-	}
-
-	if request.PeerName == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, "Incomplete request")
-		return
-	}
-
-	err = s.removePeer(username, request.PeerName)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, "Unable to disconnect peer")
-		return
-	}
-
-	io.WriteString(w, fmt.Sprintf("Disconnected peer: %s\n", request.PeerName))
-}
-
-func (s *Server) getBansHandler(w http.ResponseWriter, r *http.Request) {
-	bans := limiter.getBans()
-	for _, ban := range bans {
-		io.WriteString(w, ban+"\n")
-	}
+		w.WriteHeader(returnVal.Status)
+		w.Write(append(json, byte('\n')))
+	})
 }
 
 func (s *Server) adminHandler(h http.Handler) http.Handler {
@@ -129,13 +51,15 @@ func (s *Server) adminHandler(h http.Handler) http.Handler {
 		isAdmin, err := s.db.IsAdmin(username)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			io.WriteString(w, "Internal server error\n")
+			// TODO: replace with json
+			// io.WriteString(w, "Internal server error\n")
 			return
 		}
 
 		if !isAdmin {
 			w.WriteHeader(http.StatusUnauthorized)
-			io.WriteString(w, "Only administrators can access this resource\n")
+			// TODO: replace with json
+			// io.WriteString(w, "Only administrators can access this resource\n")
 			return
 		}
 
@@ -155,21 +79,21 @@ func (s *Server) authLimit(h http.Handler) http.Handler {
 		bucket := limiter.getIP(sourceAddr)
 		if bucket.TakeAvailable(1) == 0 {
 			w.WriteHeader(http.StatusTooManyRequests)
-			io.WriteString(w, "Rate limit has been reached\n")
+			// io.WriteString(w, "Rate limit has been reached\n")
 			return
 		}
 
 		username, password, ok := r.BasicAuth()
 		if !ok {
 			w.WriteHeader(http.StatusUnauthorized)
-			io.WriteString(w, "Authentication required\n")
+			// io.WriteString(w, "Authentication required\n")
 			return
 		}
 
 		err := s.db.Authenticate(username, password)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
-			io.WriteString(w, "Bad username or password\n")
+			// io.WriteString(w, "Bad username or password\n")
 			return
 		}
 

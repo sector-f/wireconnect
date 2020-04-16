@@ -25,7 +25,7 @@ type route struct {
 
 type handler struct {
 	method      string
-	handlerFunc http.HandlerFunc
+	handlerFunc apiFunc
 	needsAdmin  bool
 }
 
@@ -181,12 +181,22 @@ func NewServer(conf Config) (*Server, error) {
 				},
 			},
 		},
+		route{
+			pattern: "/interfaces",
+			handlers: []handler{
+				handler{
+					method:      "GET",
+					handlerFunc: server.getInterfacesHandler,
+					needsAdmin:  false,
+				},
+			},
+		},
 	}
 
 	for _, route := range routes {
 		methodHandler := make(handlers.MethodHandler)
 		for _, handler := range route.handlers {
-			var h http.Handler = handler.handlerFunc
+			var h http.Handler = jsonHandler(handler.handlerFunc)
 
 			if handler.needsAdmin {
 				h = server.adminHandler(h)
