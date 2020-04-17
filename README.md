@@ -1,5 +1,6 @@
-Flow
-====
+# wireconnect
+
+## Flow
 1. HTTP server listens on port
 2. Server creates wireguard interface with no peers
 3. Client connects to server, sends POST (with JSON body) to /connect using HTTP Basic Auth
@@ -13,19 +14,30 @@ Flow
 6. Server adds peer to wireguard interface using client's public key (with the IP address that client connected from being used as the peer address)
 7. Client creates wireguard interface using server's IP address and public key
 
-To-Do
-=====
+## Implementation
+
+### Server
+- [x] Connect
+- [x] Disconnect
+- [x] Add Peer
+- [ ] Delete Peer
+- [ ] Modify Peer
+- [x] Add User
+- [ ] Delete User
+- [ ] Modify User
+
+### Client
+- [ ] Connect
+- [ ] Disconnect
+- [ ] Add Peer
+- [ ] Delete Peer
+- [ ] Modify Peer
+- [ ] Add User
+- [ ] Delete User
+- [ ] Modify User
+
+## To-Do
 * Server:
 	* Force TLS
-	* Add routes for adding/modifying/deleting users
-	* Make responses use JSON
 	* Add block time to rate-limit ban list (if feasible)
 	* Add post-up/post-down hooks
-
-* Client:
-	* Implement everything
-
-HTTP Routes
-===========
-* /connect
-* /disconnect
