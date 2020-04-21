@@ -135,7 +135,7 @@ func NewServer(conf Config) (*Server, error) {
 			log.Println("Caught signal")
 		}
 
-		server.shutdown()
+		server.Shutdown()
 		os.Exit(1)
 	}()
 

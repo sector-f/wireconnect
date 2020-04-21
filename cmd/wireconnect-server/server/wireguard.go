@@ -160,7 +160,7 @@ func (s *Server) removePeer(username, peername string) error {
 	return nil
 }
 
-func (s *Server) shutdown() {
+func (s *Server) Shutdown() {
 	log.Println("Shutting down")
 
 	for _, link := range s.activeInterfaces {

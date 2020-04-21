@@ -38,6 +38,5 @@
 
 ## To-Do
 * Server:
-	* Force TLS
 	* Add block time to rate-limit ban list (if feasible)
 	* Add post-up/post-down hooks
