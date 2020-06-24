@@ -179,6 +179,11 @@ func NewServer(conf Config) (*Server, error) {
 					handlerFunc: server.createPeerHandler,
 					needsAdmin:  true,
 				},
+				handler{
+					method:      "GET",
+					handlerFunc: server.listPeersHandler,
+					needsAdmin:  false,
+				},
 			},
 		},
 		route{

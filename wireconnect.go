@@ -83,6 +83,12 @@ type Address struct {
 	Mask    net.IPMask `json:"mask"`
 }
 
+type Peer struct {
+	Name            string
+	Address         string
+	ServerInterface string
+}
+
 func (a Address) String() string {
 	var cidrmask uint
 

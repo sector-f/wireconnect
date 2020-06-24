@@ -143,3 +143,14 @@ func (s *Server) addUserHandler(r *http.Request) (*wireconnect.SuccessResponse, 
 
 	return &wireconnect.SuccessResponse{http.StatusCreated, "User created"}, nil
 }
+
+func (s *Server) listPeersHandler(r *http.Request) (*wireconnect.SuccessResponse, error) {
+	username, _, _ := r.BasicAuth()
+
+	peers := s.db.ListPeers(username)
+	if peers == nil {
+		return nil, wireconnect.ErrorResponse{http.StatusInternalServerError, "Error reading peers from database"}
+	}
+
+	return &wireconnect.SuccessResponse{http.StatusOK, peers}, nil
+}

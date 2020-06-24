@@ -67,3 +67,49 @@ func (s *ServiceDB) GetPeer(username, peername string) *PeerConfig {
 		DBIface: iface,
 	}
 }
+
+func (s *ServiceDB) ListPeers(username string) *[]wireconnect.Peer {
+	rows, err := s.db.Query(
+		`SELECT name FROM peers INNER JOIN users ON users.id = peers.user_id WHERE users.username = ?`,
+		username,
+	)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	peerNames := []string{}
+	for rows.Next() {
+		var peerName string
+		if err := rows.Scan(&peerName); err != nil {
+			return nil
+		}
+
+		peerNames = append(peerNames, peerName)
+	}
+
+	peerConfigs := []PeerConfig{}
+	for _, peerName := range peerNames {
+		config := s.GetPeer(username, peerName)
+		if config != nil {
+			peerConfigs = append(peerConfigs, *config)
+		}
+	}
+	if len(peerConfigs) == 0 {
+		return nil
+	}
+
+	peers := []wireconnect.Peer{}
+	for _, config := range peerConfigs {
+		peers = append(
+			peers,
+			wireconnect.Peer{
+				Name:            config.Name,
+				Address:         config.Address.String(),
+				ServerInterface: config.DBIface.Name,
+			},
+		)
+	}
+
+	return &peers
+}
