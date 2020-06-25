@@ -22,9 +22,12 @@
 - [x] Add Peer
 - [ ] Delete Peer
 - [ ] Modify Peer
+- [x] List Peers (per-user)
+- [ ] List Peers (global)
 - [x] Add User
 - [ ] Delete User
 - [ ] Modify User
+- [ ] List Users
 
 ### Client
 - [ ] Connect
@@ -32,9 +35,11 @@
 - [ ] Add Peer
 - [ ] Delete Peer
 - [ ] Modify Peer
+- [ ] List Peers
 - [ ] Add User
 - [ ] Delete User
 - [ ] Modify User
+- [ ] List Users
 
 ## To-Do
 * Server:
