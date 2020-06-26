@@ -4,6 +4,9 @@ import (
 	"crypto/tls"
 	"errors"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/sector-f/wireconnect/cmd/wireconnect-server/reloadablecert"
 	"github.com/sector-f/wireconnect/cmd/wireconnect-server/server"
@@ -34,6 +37,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGUSR1)
+
+	go func() {
+		for _ = range sigChan {
+			err := cert.Reload()
+			if err != nil {
+				log.Printf("Failed to reload TLS key/certificate: %v\n", err)
+			} else {
+				log.Println("Reloaded TLS key/certificate")
+			}
+		}
+	}()
 
 	tlsConfig := &tls.Config{
 		GetCertificate:           cert.GetCertificate,
