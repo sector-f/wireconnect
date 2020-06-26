@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 
+	"github.com/sector-f/wireconnect/cmd/wireconnect-server/reloadablecert"
 	"github.com/sector-f/wireconnect/cmd/wireconnect-server/server"
 	flag "github.com/spf13/pflag"
 )
@@ -29,7 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cert, err := server.NewReloadableCert(*certfile, *keyfile)
+	cert, err := reloadablecert.New(*certfile, *keyfile)
 	if err != nil {
 		log.Fatal(err)
 	}

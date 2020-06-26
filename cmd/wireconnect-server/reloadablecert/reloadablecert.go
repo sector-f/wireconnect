@@ -1,4 +1,4 @@
-package server
+package reloadablecert
 
 import (
 	"crypto/tls"
@@ -12,7 +12,7 @@ type ReloadableCert struct {
 	mu       sync.Mutex
 }
 
-func NewReloadableCert(certFile string, keyFile string) (*ReloadableCert, error) {
+func New(certFile string, keyFile string) (*ReloadableCert, error) {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, err
