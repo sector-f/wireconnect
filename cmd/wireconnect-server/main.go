@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"errors"
 	"log"
 
@@ -22,16 +23,32 @@ func main() {
 
 	config := server.NewConfig()
 	config.DSN = *dbfile
-	server, err := server.NewServer(config)
+	wcServer, err := server.NewServer(config)
 	if err != nil {
-		server.Shutdown()
+		wcServer.Shutdown()
+		log.Fatal(err)
+	}
+
+	cert, err := server.NewReloadableCert(*certfile, *keyfile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tlsConfig := &tls.Config{
+		GetCertificate:           cert.GetCertificate,
+		PreferServerCipherSuites: true,
+		MinVersion:               tls.VersionTLS12,
+	}
+
+	listener, err := tls.Listen("tcp", config.Address, tlsConfig)
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Printf("Listening on %s\n", config.Address)
-	err = server.ListenAndServeTLS(*certfile, *keyfile)
+	err = wcServer.Serve(listener)
 	if err != nil {
-		server.Shutdown()
+		wcServer.Shutdown()
 		log.Fatal(err)
 	}
 }
