@@ -1,9 +1,14 @@
 package main
 
 import (
+	"crypto/tls"
 	"errors"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/sector-f/wireconnect/cmd/wireconnect-server/reloadablecert"
 	"github.com/sector-f/wireconnect/cmd/wireconnect-server/server"
 	flag "github.com/spf13/pflag"
 )
@@ -22,16 +27,46 @@ func main() {
 
 	config := server.NewConfig()
 	config.DSN = *dbfile
-	server, err := server.NewServer(config)
+	wcServer, err := server.NewServer(config)
 	if err != nil {
-		server.Shutdown()
+		wcServer.Shutdown()
+		log.Fatal(err)
+	}
+
+	cert, err := reloadablecert.New(*certfile, *keyfile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGUSR1)
+
+	go func() {
+		for _ = range sigChan {
+			err := cert.Reload()
+			if err != nil {
+				log.Printf("Failed to reload TLS key/certificate: %v\n", err)
+			} else {
+				log.Println("Reloaded TLS key/certificate")
+			}
+		}
+	}()
+
+	tlsConfig := &tls.Config{
+		GetCertificate:           cert.GetCertificate,
+		PreferServerCipherSuites: true,
+		MinVersion:               tls.VersionTLS12,
+	}
+
+	listener, err := tls.Listen("tcp", config.Address, tlsConfig)
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Printf("Listening on %s\n", config.Address)
-	err = server.ListenAndServeTLS(*certfile, *keyfile)
+	err = wcServer.Serve(listener)
 	if err != nil {
-		server.Shutdown()
+		wcServer.Shutdown()
 		log.Fatal(err)
 	}
 }
