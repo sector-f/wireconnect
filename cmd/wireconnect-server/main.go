@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 
 	"github.com/sector-f/wireconnect/cmd/wireconnect-server/server"
@@ -8,8 +9,11 @@ import (
 )
 
 func main() {
+	flag.ErrHelp = errors.New("Help requested")
+
 	keyfile := flag.StringP("key", "k", "", "Path to keyfile")
 	certfile := flag.StringP("cert", "c", "", "Path to certfile")
+	dbfile := flag.StringP("database", "d", "file:/var/local/wireconnect.sqlite", "SQLite DSN for wireconnect database")
 	flag.Parse()
 
 	if *keyfile == "" || *certfile == "" {
@@ -17,8 +21,7 @@ func main() {
 	}
 
 	config := server.NewConfig()
-	config.DSN = "file:./wireconnect.sqlite"
-
+	config.DSN = *dbfile
 	server, err := server.NewServer(config)
 	if err != nil {
 		server.Shutdown()

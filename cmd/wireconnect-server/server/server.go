@@ -39,7 +39,7 @@ type Config struct {
 func NewConfig() Config {
 	return Config{
 		Address:      "0.0.0.0:8080",
-		DSN:          "file:/var/local/wireconnect.sqlite",
+		DSN:          "",
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}
