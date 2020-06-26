@@ -2,7 +2,6 @@ package server
 
 import (
 	"crypto/tls"
-	// "crypto/x509"
 	"sync"
 )
 
