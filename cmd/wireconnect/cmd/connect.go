@@ -129,7 +129,7 @@ func connectCmd() *cobra.Command {
 							Remove:                      false,
 							UpdateOnly:                  false,
 							PresharedKey:                nil,
-							Endpoint:                    nil, // TODO: Get this from http request IP?
+							Endpoint:                    nil, // TODO: get this from --server? Or make part of ConnectionReply
 							PersistentKeepaliveInterval: nil,
 							ReplaceAllowedIPs:           true, // Probably not needed
 							AllowedIPs: []net.IPNet{
