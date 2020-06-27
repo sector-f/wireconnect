@@ -34,6 +34,7 @@ func Root() *cobra.Command {
 			if serverarg == "" {
 				return errors.New("Server not specified")
 			}
+			Server = serverarg
 
 			userarg, err := cmd.Flags().GetString("user")
 			if err != nil {
