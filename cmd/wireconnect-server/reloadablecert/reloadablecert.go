@@ -9,7 +9,7 @@ type ReloadableCert struct {
 	certFile string
 	keyFile  string
 	tlsCert  *tls.Certificate
-	mu       sync.Mutex
+	mu       sync.RWMutex
 }
 
 func New(certFile string, keyFile string) (*ReloadableCert, error) {
@@ -41,8 +41,8 @@ func (cert *ReloadableCert) Reload() error {
 }
 
 func (cert *ReloadableCert) GetCertificate(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	cert.mu.Lock()
-	defer cert.mu.Unlock()
+	cert.mu.RLock()
+	defer cert.mu.RUnlock()
 
 	return cert.tlsCert, nil
 }
