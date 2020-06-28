@@ -63,6 +63,14 @@ func (s *Server) makeIface(iface *database.DBIface) error {
 	}
 
 	err = s.wgClient.ConfigureDevice(iface.Name, wgConfig)
+	if err != nil {
+		return err
+	}
+
+	err = netlink.LinkSetUp(link)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
