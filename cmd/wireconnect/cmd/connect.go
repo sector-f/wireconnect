@@ -143,6 +143,14 @@ func connectCmd() *cobra.Command {
 				}
 
 				err = wgClient.ConfigureDevice("wireconnect", wgConfig)
+				if err != nil {
+					return err
+				}
+
+				err = netlink.LinkSetUp(link)
+				if err != nil {
+					return err
+				}
 			} else {
 
 				data, err := ioutil.ReadAll(resp.Body)
