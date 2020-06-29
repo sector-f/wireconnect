@@ -89,7 +89,9 @@ func Root() *cobra.Command {
 	rootCmd.PersistentFlags().StringP("user", "u", "", "Specify username[:password]")
 	rootCmd.PersistentFlags().StringP("server", "s", "", "Specify server address[:port] (Default port: 8900)")
 	rootCmd.PersistentFlags().BoolP("insecure", "k", false, "Ignore insecure TLS connections")
+
 	rootCmd.AddCommand(connectCmd())
+	rootCmd.AddCommand(addPeerCmd())
 
 	return &rootCmd
 }
