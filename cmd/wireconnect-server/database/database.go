@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS peers (
 	name TEXT NOT NULL,
 	address INTEGER NOT NULL,
 	mask INTEGER NOT NULL,
+	endpoint_address INTEGER NOT NULL,
+	endpoint_mask INTEGER NOT NULL,
 	server_interface_id INTEGER NOT NULL,
 	user_id INTEGER NOT NULL,
 	FOREIGN KEY(server_interface_id) REFERENCES server_interfaces(id),

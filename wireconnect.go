@@ -61,6 +61,7 @@ type CreatePeerRequest struct {
 	UserName        string `json:"user_name"`
 	PeerName        string `json:"peer_name"`
 	Address         string `json:"address"`
+	EndpointAddress string `json:"endpoint_address"`
 	ServerInterface string `json:"server_interface"`
 }
 
@@ -86,6 +87,7 @@ type Address struct {
 type Peer struct {
 	Name            string
 	Address         string
+	EndpointAddress string
 	ServerInterface string
 }
 

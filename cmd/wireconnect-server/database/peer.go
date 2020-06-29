@@ -5,9 +5,10 @@ import (
 )
 
 type PeerConfig struct {
-	Name    string
-	Address wireconnect.Address
-	DBIface *DBIface
+	Name            string
+	Address         wireconnect.Address
+	EndpointAddress wireconnect.Address
+	DBIface         *DBIface
 }
 
 func (s *ServiceDB) CreatePeer(peer wireconnect.CreatePeerRequest) error {
@@ -16,8 +17,13 @@ func (s *ServiceDB) CreatePeer(peer wireconnect.CreatePeerRequest) error {
 		return err
 	}
 
+	endpointAddr, err := wireconnect.ParseAddress(peer.EndpointAddress)
+	if err != nil {
+		return err
+	}
+
 	_, err = s.db.Exec(
-		`INSERT INTO peers (name, address, mask, server_interface_id, user_id)
+		`INSERT INTO peers (name, address, mask, endpoint_address, endpoint_mask, server_interface_id, user_id)
 		VALUES (
 			?,
 			?,
@@ -28,6 +34,8 @@ func (s *ServiceDB) CreatePeer(peer wireconnect.CreatePeerRequest) error {
 		peer.PeerName,
 		peerAddr.Address,
 		peerAddr.Mask,
+		endpointAddr.Address,
+		endpointAddr.Mask,
 		peer.ServerInterface,
 		peer.UserName,
 	)
@@ -40,7 +48,7 @@ func (s *ServiceDB) CreatePeer(peer wireconnect.CreatePeerRequest) error {
 
 func (s *ServiceDB) GetPeer(username, peername string) *PeerConfig {
 	row := s.db.QueryRow(
-		`SELECT address, mask, server_interface_id
+		`SELECT address, mask, endpoint_address, endpoint_mask, server_interface_id
 		FROM peers
 		WHERE user_id = (SELECT id FROM users WHERE username = ?)
 		AND name = ?`,
@@ -48,10 +56,10 @@ func (s *ServiceDB) GetPeer(username, peername string) *PeerConfig {
 		peername,
 	)
 
-	var addr wireconnect.Address
+	var addr, endpointAddr wireconnect.Address
 	var ifaceID int
 
-	err := row.Scan(&addr.Address, &addr.Mask, &ifaceID)
+	err := row.Scan(&addr.Address, &addr.Mask, &endpointAddr.Address, &endpointAddr.Mask, &ifaceID)
 	if err != nil {
 		return nil
 	}
@@ -106,6 +114,7 @@ func (s *ServiceDB) ListPeers(username string) *[]wireconnect.Peer {
 			wireconnect.Peer{
 				Name:            config.Name,
 				Address:         config.Address.String(),
+				EndpointAddress: config.EndpointAddress.String(),
 				ServerInterface: config.DBIface.Name,
 			},
 		)
