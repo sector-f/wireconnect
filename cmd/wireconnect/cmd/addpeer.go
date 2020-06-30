@@ -2,10 +2,15 @@ package cmd
 
 import (
 	"bufio"
-	"errors"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 
+	"github.com/sector-f/wireconnect"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +25,7 @@ func addPeerCmd() *cobra.Command {
 
 			name, _ := cmd.Flags().GetString("name")
 			if name == "" {
-				fmt.Print("Enter name: ")
+				fmt.Print("Enter peer configuration name: ")
 				name, _ = reader.ReadString('\n')
 			}
 
@@ -32,7 +37,7 @@ func addPeerCmd() *cobra.Command {
 
 			address, _ := cmd.Flags().GetString("address")
 			if address == "" {
-				fmt.Print("Enter address: ")
+				fmt.Print("Enter peer address: ")
 				address, _ = reader.ReadString('\n')
 			}
 
@@ -48,7 +53,62 @@ func addPeerCmd() *cobra.Command {
 				serverInterface, _ = reader.ReadString('\n')
 			}
 
-			return errors.New("Unimplemented subcommand")
+			msg := &wireconnect.CreatePeerRequest{
+				UserName:        username,
+				PeerName:        name,
+				Address:         address,
+				EndpointAddress: endpointAddress,
+				ServerInterface: serverInterface,
+			}
+
+			jsonMsg, err := json.Marshal(msg)
+			if err != nil {
+				return err
+			}
+
+			req := &http.Request{
+				Method: "POST",
+				URL: &url.URL{
+					Scheme: "https",
+					Host:   Server,
+					Path:   "/peers",
+				},
+				Body:   ioutil.NopCloser(bytes.NewBuffer(jsonMsg)),
+				Header: make(http.Header),
+			}
+
+			req.Header.Add("Content-Type", "application/json")
+			req.SetBasicAuth(Username, Password)
+
+			resp, err := Client.Do(req)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode == http.StatusCreated {
+				data, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return err
+				}
+
+				fmt.Println(string(data))
+			} else {
+				data, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return err
+				}
+
+				var reply string
+				err = json.Unmarshal(data, &reply)
+				if err != nil {
+					return err
+				}
+
+				fmt.Printf("Received %v: %v\n", resp.Status, reply)
+			}
+
+			return nil
 		},
 	}
 

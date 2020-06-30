@@ -57,7 +57,6 @@ func connectCmd() *cobra.Command {
 				Body:   ioutil.NopCloser(bytes.NewBuffer(jsonMsg)),
 				Header: make(http.Header),
 			}
-
 			req.Header.Add("Content-Type", "application/json")
 			req.SetBasicAuth(Username, Password)
 

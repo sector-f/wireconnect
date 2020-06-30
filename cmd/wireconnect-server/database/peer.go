@@ -11,6 +11,8 @@ type PeerConfig struct {
 	DBIface         *DBIface
 }
 
+// TODO: make this return different errors; propogate through createPeerHandler to client
+// e.g. user/interface does not exist, address isn't valid address in CIDR notation
 func (s *ServiceDB) CreatePeer(peer wireconnect.CreatePeerRequest) error {
 	peerAddr, err := wireconnect.ParseAddress(peer.Address)
 	if err != nil {
