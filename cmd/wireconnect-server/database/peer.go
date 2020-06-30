@@ -53,7 +53,7 @@ func (s *ServiceDB) CreatePeer(peer wireconnect.CreatePeerRequest) error {
 
 func (s *ServiceDB) GetPeer(username, peername string) *PeerConfig {
 	row := s.db.QueryRow(
-		`SELECT address, mask, endpoint_address, endpoint_port, server_interface_id
+		`SELECT address, mask, endpoint_address, server_interface_id
 		FROM peers
 		WHERE user_id = (SELECT id FROM users WHERE username = ?)
 		AND name = ?`,
@@ -64,11 +64,10 @@ func (s *ServiceDB) GetPeer(username, peername string) *PeerConfig {
 	var (
 		addr         wireconnect.Address
 		endpointAddr net.IP
-		endpointPort int
 		ifaceID      int
 	)
 
-	err := row.Scan(&addr.Address, &addr.Mask, &endpointAddr, &endpointPort, &ifaceID)
+	err := row.Scan(&addr.Address, &addr.Mask, &endpointAddr, &ifaceID)
 	if err != nil {
 		return nil
 	}
