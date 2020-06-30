@@ -83,6 +83,11 @@ func connectCmd() *cobra.Command {
 					return err
 				}
 
+				endpointAddr := net.ParseIP(reply.EndpointAddress)
+				if endpointAddr == nil {
+					return errors.New("Invalid endpoint address")
+				}
+
 				// FIXME: should creation of the WireGuard interface be
 				// before or after connecting to the server?
 
@@ -124,11 +129,14 @@ func connectCmd() *cobra.Command {
 					PrivateKey: &privKey,
 					Peers: []wgtypes.PeerConfig{
 						wgtypes.PeerConfig{
-							PublicKey:                   serverPubKey,
-							Remove:                      false,
-							UpdateOnly:                  false,
-							PresharedKey:                nil,
-							Endpoint:                    nil, // TODO: get this from --server? Or make part of ConnectionReply
+							PublicKey:    serverPubKey,
+							Remove:       false,
+							UpdateOnly:   false,
+							PresharedKey: nil,
+							Endpoint: &net.UDPAddr{
+								IP:   endpointAddr,
+								Port: reply.EndpointPort,
+							},
 							PersistentKeepaliveInterval: nil,
 							ReplaceAllowedIPs:           true, // Probably not needed
 							AllowedIPs: []net.IPNet{

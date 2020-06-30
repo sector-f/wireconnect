@@ -84,8 +84,10 @@ func (s *Server) connectHandler(r *http.Request) (*wireconnect.SuccessResponse, 
 
 	wgDev, _ := s.wgClient.Device(peer.DBIface.Name)
 	resp := wireconnect.ConnectionReply{
-		PublicKey:     wgDev.PublicKey.String(),
-		ClientAddress: peer.Address.String(),
+		PublicKey:       wgDev.PublicKey.String(),
+		ClientAddress:   peer.Address.String(),
+		EndpointAddress: peer.EndpointAddress.String(),
+		EndpointPort:    wgDev.ListenPort,
 	}
 
 	return &wireconnect.SuccessResponse{http.StatusOK, resp}, nil

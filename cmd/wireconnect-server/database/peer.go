@@ -1,13 +1,16 @@
 package database
 
 import (
+	"errors"
+	"net"
+
 	"github.com/sector-f/wireconnect"
 )
 
 type PeerConfig struct {
 	Name            string
 	Address         wireconnect.Address
-	EndpointAddress wireconnect.Address
+	EndpointAddress net.IP
 	DBIface         *DBIface
 }
 
@@ -19,14 +22,15 @@ func (s *ServiceDB) CreatePeer(peer wireconnect.CreatePeerRequest) error {
 		return err
 	}
 
-	endpointAddr, err := wireconnect.ParseAddress(peer.EndpointAddress)
-	if err != nil {
-		return err
+	endpointHost := net.ParseIP(peer.EndpointAddress)
+	if endpointHost == nil {
+		return errors.New("Invalid endpoint host address")
 	}
 
 	_, err = s.db.Exec(
-		`INSERT INTO peers (name, address, mask, endpoint_address, endpoint_mask, server_interface_id, user_id)
+		`INSERT INTO peers (name, address, mask, endpoint_address, server_interface_id, user_id)
 		VALUES (
+			?,
 			?,
 			?,
 			?,
@@ -36,8 +40,7 @@ func (s *ServiceDB) CreatePeer(peer wireconnect.CreatePeerRequest) error {
 		peer.PeerName,
 		peerAddr.Address,
 		peerAddr.Mask,
-		endpointAddr.Address,
-		endpointAddr.Mask,
+		endpointHost,
 		peer.ServerInterface,
 		peer.UserName,
 	)
@@ -50,7 +53,7 @@ func (s *ServiceDB) CreatePeer(peer wireconnect.CreatePeerRequest) error {
 
 func (s *ServiceDB) GetPeer(username, peername string) *PeerConfig {
 	row := s.db.QueryRow(
-		`SELECT address, mask, endpoint_address, endpoint_mask, server_interface_id
+		`SELECT address, mask, endpoint_address, endpoint_port, server_interface_id
 		FROM peers
 		WHERE user_id = (SELECT id FROM users WHERE username = ?)
 		AND name = ?`,
@@ -58,10 +61,14 @@ func (s *ServiceDB) GetPeer(username, peername string) *PeerConfig {
 		peername,
 	)
 
-	var addr, endpointAddr wireconnect.Address
-	var ifaceID int
+	var (
+		addr         wireconnect.Address
+		endpointAddr net.IP
+		endpointPort int
+		ifaceID      int
+	)
 
-	err := row.Scan(&addr.Address, &addr.Mask, &endpointAddr.Address, &endpointAddr.Mask, &ifaceID)
+	err := row.Scan(&addr.Address, &addr.Mask, &endpointAddr, &endpointPort, &ifaceID)
 	if err != nil {
 		return nil
 	}
@@ -72,9 +79,10 @@ func (s *ServiceDB) GetPeer(username, peername string) *PeerConfig {
 	}
 
 	return &PeerConfig{
-		Name:    peername,
-		Address: addr,
-		DBIface: iface,
+		Name:            peername,
+		Address:         addr,
+		EndpointAddress: endpointAddr,
+		DBIface:         iface,
 	}
 }
 

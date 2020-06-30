@@ -53,8 +53,10 @@ type ConnectionRequest struct {
 }
 
 type ConnectionReply struct {
-	PublicKey     string `json:"public_key"`
-	ClientAddress string `json:"client_address"`
+	PublicKey       string `json:"public_key"`
+	ClientAddress   string `json:"client_address"`
+	EndpointAddress string `json:"endpoint_address"`
+	EndpointPort    int    `json:"endpoint_port"`
 }
 
 type CreatePeerRequest struct {
