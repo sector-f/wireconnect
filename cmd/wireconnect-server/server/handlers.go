@@ -19,9 +19,8 @@ func jsonHandler(internal apiFunc) http.HandlerFunc {
 			case wireconnect.ErrorResponse:
 				w.WriteHeader(val.Status)
 
-				json, err := json.MarshalIndent(val, "", "  ")
+				json, err := json.Marshal(val.Message)
 				if err != nil {
-					w.Write([]byte(val.Message))
 					return
 				}
 

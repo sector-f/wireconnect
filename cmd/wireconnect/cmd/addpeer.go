@@ -87,12 +87,12 @@ func addPeerCmd() *cobra.Command {
 			defer resp.Body.Close()
 
 			if resp.StatusCode == http.StatusCreated {
-				data, err := ioutil.ReadAll(resp.Body)
+				_, err := ioutil.ReadAll(resp.Body)
 				if err != nil {
 					return err
 				}
 
-				fmt.Println(string(data))
+				fmt.Println("Peer created")
 			} else {
 				data, err := ioutil.ReadAll(resp.Body)
 				if err != nil {

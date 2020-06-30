@@ -166,7 +166,7 @@ func connectCmd() *cobra.Command {
 				}
 
 				var reply string
-				err = json.Unmarshal(data, reply)
+				err = json.Unmarshal(data, &reply)
 				if err != nil {
 					return err
 				}
